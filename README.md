@@ -47,8 +47,8 @@ Os detalhes do acesso a dados e das migrations estão no [repositório APP](http
 
 | Operação | Ordem |
 |---|---|
-| Deploy | **K8S** Bootstrap (rede + EKS) → **DB** (este repo) → **APP** (imagens) / **LAMBDA** → **K8S** K8s Apply (manifests + Secret das APIs) |
-| Destroy | **APP** / **LAMBDA** → **DB** (este repo) → **K8S** |
+| Deploy | **K8S** Bootstrap (rede + EKS) → **DB** (este repo) → **APP** Bootstrap (imagens) / **LAMBDA** → **K8S** K8s Apply (manifests + Secret das APIs), disparado automaticamente pelo APP |
+| Destroy | **APP** (nada a destruir: o ECR é manual) / **LAMBDA** → **DB** (este repo) → **K8S** |
 
 - Se o K8S for destruído antes do DB, o SG dos nodes ainda é referenciado pela regra do RDS e as subnets privadas ainda têm as ENIs do RDS. O Destroy do repo K8S verifica isso e falha antes de começar se o RDS ainda existir.
 - **SG do RDS recriado**, com outro ID. Acontece em Destroy + Bootstrap, ou quando muda o `name`, a `description` ou a VPC do SG. Reaplique o **LAMBDA**: a regra de acesso dele sumiu junto com o SG antigo.

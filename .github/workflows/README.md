@@ -95,7 +95,7 @@ Use-o na primeira criação do RDS e para recriá-lo depois de um Destroy. Ele e
 
 Configure o environment `destroy` **antes** do primeiro uso, com *Required reviewers* e *Deployment branches* restrito a `main`. Se não existir, o GitHub o cria sem proteção na primeira execução.
 
-Ordem entre repositórios: destrua o APP/LAMBDA antes deste repo e o K8S depois (veja o [README principal](../../README.md#3-dependências-entre-repositórios)).
+Ordem entre repositórios: destrua o LAMBDA antes deste repo e o K8S depois. O APP não tem recursos a destruir (veja o [README principal](../../README.md#3-dependências-entre-repositórios)).
 
 ---
 
