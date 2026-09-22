@@ -47,12 +47,12 @@ Os detalhes do acesso a dados e das migrations estão no [repositório APP](http
 
 | Operação | Ordem |
 |---|---|
-| Deploy | **K8S** (rede + EKS) → **DB** (este repo) → **APP** / **LAMBDA** |
+| Deploy | **K8S** Bootstrap (rede + EKS) → **DB** (este repo) → **APP** (imagens) / **LAMBDA** → **K8S** K8s Apply (manifests + Secret das APIs) |
 | Destroy | **APP** / **LAMBDA** → **DB** (este repo) → **K8S** |
 
-- Se o K8S for destruído antes do DB, é o destroy do **K8S** que falha com `DependencyViolation`: o SG dos nodes ainda é referenciado pela regra do RDS, e as subnets privadas ainda têm as ENIs do RDS.
+- Se o K8S for destruído antes do DB, o SG dos nodes ainda é referenciado pela regra do RDS e as subnets privadas ainda têm as ENIs do RDS. O Destroy do repo K8S verifica isso e falha antes de começar se o RDS ainda existir.
 - **SG do RDS recriado**, com outro ID. Acontece em Destroy + Bootstrap, ou quando muda o `name`, a `description` ou a VPC do SG. Reaplique o **LAMBDA**: a regra de acesso dele sumiu junto com o SG antigo.
-- **Instância do RDS recriada**. Acontece em Destroy + Bootstrap, ou numa mudança que force replace da instância. O banco volta vazio. Rode o deploy do **APP** com restart dos pods, porque as migrations só rodam quando as APIs sobem.
+- **Instância do RDS recriada**. Acontece em Destroy + Bootstrap, ou numa mudança que force replace da instância. O banco volta vazio. Rode o workflow **K8s Apply** do repo K8S (`restart-pods = true`), porque as migrations só rodam quando as APIs sobem.
 
 ### Contrato consumido (criado pelo repo K8S)
 
@@ -66,16 +66,18 @@ Este repo encontra a rede por tag e nome, via data sources ([infra/data.tf](infr
 
 Se algum desses itens não existir, o `plan` falha antes de criar qualquer recurso.
 
-### Contrato produzido (usado pelos repos APP e LAMBDA)
+### Contrato produzido (usado pelos repos K8S e LAMBDA)
 
-| Item | Valor | Onde o APP usa |
+O Secret das APIs (`oficina-api-secrets`, com a connection string) é gerado pelo workflow **K8s Apply** do repo [K8S](https://github.com/GuiToniello/tech-challenge-fase-3-K8S-soat16-rm374658).
+
+| Item | Valor | Onde o K8S usa |
 |---|---|---|
-| Identifier do RDS | `techchallenge-oficina-postgres` | Variable `RDS_INSTANCE_IDENTIFIER`: o deploy do APP busca o endpoint com `aws rds describe-db-instances` |
+| Identifier do RDS | `techchallenge-oficina-postgres` | Variable `RDS_INSTANCE_IDENTIFIER`: o K8s Apply busca o endpoint com `aws rds describe-db-instances`, e o Destroy do K8S verifica se o RDS já foi removido |
 | Database | `oficina` | Variable `RDS_DATABASE` |
 | Usuário | `sa` | Variable `RDS_USERNAME` |
 | Porta | `5432` | Connection string |
-| Senha | Secret `RDS_PASSWORD` | Precisa ter **o mesmo valor** neste repo e no APP |
-| SG do RDS | `techchallenge-oficina-rds-sg` | O LAMBDA cria o próprio `aws_vpc_security_group_ingress_rule` neste SG |
+| Senha | Secret `RDS_PASSWORD` | Precisa ter **o mesmo valor** neste repo e no K8S |
+| SG do RDS | `techchallenge-oficina-rds-sg` | O LAMBDA cria o próprio `aws_vpc_security_group_ingress_rule` neste SG. O Destroy do K8S confere que ele já foi removido |
 
 As regras do SG do RDS são recursos separados (`aws_vpc_security_group_ingress_rule` / `aws_vpc_security_group_egress_rule`), não blocos inline. Assim, uma regra criada por outro repo não é removida no próximo apply deste.
 
@@ -106,16 +108,15 @@ Outputs do Terraform: `rds_identifier`, `rds_endpoint`, `rds_port`, `rds_databas
 | `AWS_REGION` | Variable | `us-east-1` |
 
 **Regras para `RDS_PASSWORD`:**
-- Use de 8 a 128 caracteres ASCII imprimíveis, **sem** `/`, `'`, `"`, `@`, espaço, `;`, `$` e `` ` `` (backtick).
+- Use de 8 a 128 caracteres ASCII imprimíveis, **sem** `/`, `'`, `"`, `@`, espaço e `;`.
   - O RDS rejeita os cinco primeiros.
-  - O `;` quebra a connection string montada pelo APP.
-  - `$` e o backtick são interpretados pelo PowerShell do deploy do APP, que monta a connection string numa string com aspas duplas.
+  - O `;` quebra a connection string montada pelo K8s Apply do repo K8S.
 - Não reaproveite a senha de desenvolvimento local.
 
 **Rotação da senha:**
-1. Atualize o secret `RDS_PASSWORD` aqui e no repo APP.
+1. Atualize o secret `RDS_PASSWORD` aqui e no repo K8S.
 2. Rode o workflow **Bootstrap** neste repo. Trocar um secret não dispara o Deploy: o apply só roda com push em `infra/**` ou nos workflows `deploy.yml` / `_terraform.yml`.
-3. Rode o deploy do APP com restart dos pods.
+3. Rode o **K8s Apply** do repo K8S com `restart-pods = true`.
 
 ## 6. Pipelines (GitHub Actions)
 
@@ -145,7 +146,7 @@ terraform plan -var-file="terraform.tfvars"
 terraform apply -var-file="terraform.tfvars"
 ```
 
-Em `rds_password`, use **o mesmo valor** do secret `RDS_PASSWORD`. O state é o mesmo do CI, e um valor diferente troca na hora a senha master do RDS (`apply_immediately = true`), derrubando a conexão do APP. O `terraform.tfvars` é ignorado pelo Git e não deve ser versionado. O `.terraform.lock.hcl` **é** versionado e fixa a versão do provider AWS. Para atualizá-lo, rode `terraform init -upgrade` e depois `terraform providers lock -platform=linux_amd64 -platform=windows_amd64`.
+Em `rds_password`, use **o mesmo valor** do secret `RDS_PASSWORD`. O state é o mesmo do CI, e um valor diferente troca na hora a senha master do RDS (`apply_immediately = true`), derrubando a conexão das APIs. O `terraform.tfvars` é ignorado pelo Git e não deve ser versionado. O `.terraform.lock.hcl` **é** versionado e fixa a versão do provider AWS. Para atualizá-lo, rode `terraform init -upgrade` e depois `terraform providers lock -platform=linux_amd64 -platform=windows_amd64`.
 
 Para validar sem acessar a AWS: `terraform init -backend=false` e `terraform validate`.
 

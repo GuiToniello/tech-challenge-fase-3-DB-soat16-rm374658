@@ -107,7 +107,7 @@ Em **Settings → Secrets and variables → Actions**:
 |---|---|---|
 | `AWS_ACCESS_KEY_ID` | Secret | Credencial do usuário IAM `terraform` (plan, apply, destroy) |
 | `AWS_SECRET_ACCESS_KEY` | Secret | Idem |
-| `RDS_PASSWORD` | Secret | `TF_VAR_rds_password`. Deve ser igual ao secret do repo APP |
+| `RDS_PASSWORD` | Secret | `TF_VAR_rds_password`. Deve ser igual ao secret do repo K8S (connection string das APIs) |
 | `AWS_REGION` | Variable | `us-east-1` |
 
 Todos os callers passam os secrets ao workflow reutilizável com `secrets: inherit`. Todos os workflows declaram `permissions: contents: read`.
