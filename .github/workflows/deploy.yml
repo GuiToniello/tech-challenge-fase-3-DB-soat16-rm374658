@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/_terraform.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  # Check obrigatório da branch main ("validate / terraform"): não usa credenciais AWS
+  validate:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      command: validate
+    secrets: inherit
+
+  # Informativo: depende da rede do repo K8S existir. Não roda em PR de fork (sem secrets)
+  plan:
+    needs: validate
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      command: plan
+    secrets: inherit
+
+  apply:
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      command: apply
+    secrets: inherit

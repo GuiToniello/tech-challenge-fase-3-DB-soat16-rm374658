@@ -1,0 +1,37 @@
+name: Destroy
+# Destrutivo: exige confirmação por input e aprovação no Environment "destroy". Os dados do RDS são perdidos.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite "destroy" para confirmar a remoção do RDS'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  # Falha visível em vez de um run "verde" que não destruiu nada
+  reject:
+    if: inputs.confirm != 'destroy' || github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Destroy não executado: informe confirm=destroy e rode a partir da branch main."
+          exit 1
+
+  gate:
+    if: inputs.confirm == 'destroy' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: destroy
+    steps:
+      - run: echo "Destroy do RDS aprovado"
+
+  destroy:
+    needs: gate
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      command: destroy
+    secrets: inherit

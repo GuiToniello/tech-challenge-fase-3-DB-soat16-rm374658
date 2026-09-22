@@ -55,3 +55,11 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Terraform
+infra/**/.terraform/
+infra/**/terraform.tfvars
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log

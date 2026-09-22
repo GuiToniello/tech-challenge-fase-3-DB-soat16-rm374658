@@ -1,0 +1,4 @@
+aws_region         = "us-east-1"
+project_name       = "techchallenge-oficina"
+rds_password       = "CHANGE_ME"
+rds_instance_class = "db.t3.micro"

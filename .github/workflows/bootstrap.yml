@@ -1,0 +1,15 @@
+name: Bootstrap
+# Primeira criação do RDS (ou recriação após o Destroy). Requer a rede do repo K8S já aplicada.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    uses: ./.github/workflows/_terraform.yml
+    with:
+      command: apply
+    secrets: inherit
