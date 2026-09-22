@@ -15,7 +15,8 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ (inputs.command == 'apply' || inputs.command == 'destroy') && 'terraform-database' || format('terraform-database-{0}-{1}', inputs.command, github.ref) }}
+      # Fora da main, apply/destroy usam um grupo próprio: falham no bloqueio abaixo sem cancelar um job legítimo pendente
+      group: ${{ (inputs.command == 'apply' || inputs.command == 'destroy') && (github.ref == 'refs/heads/main' && 'terraform-database' || format('terraform-blocked-{0}', github.run_id)) || format('terraform-database-{0}-{1}', inputs.command, github.ref) }}
       cancel-in-progress: ${{ inputs.command == 'validate' || inputs.command == 'plan' }}
     defaults:
       run:
