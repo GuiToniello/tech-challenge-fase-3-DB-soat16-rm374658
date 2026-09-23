@@ -8,6 +8,11 @@ variable "project_name" {
   default = "techchallenge-oficina"
 }
 
+variable "cluster_name" {
+  type    = string
+  default = "techchallenge-oficina-eks"
+}
+
 variable "environment" {
   type    = string
   default = "study"
