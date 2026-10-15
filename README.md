@@ -39,6 +39,12 @@ flowchart TD
 
 A aplicação precisa de persistência relacional: clientes, veículos, serviços, insumos, ordens de serviço e orçamentos, ligados por chaves estrangeiras e com índices únicos (por exemplo, a identificação CPF/CNPJ do cliente). O banco escolhido é o PostgreSQL, acessado com Entity Framework Core e Npgsql. O **RDS** assume a operação do banco (provisionamento, patches, armazenamento criptografado) e o mantém isolado em subnets privadas.
 
+A decisão está documentada em [docs/](docs):
+- [ADR-017: PostgreSQL no Amazon RDS e Modelo de Dados](docs/adr/ADR-017-PostgreSQL-no-Amazon-RDS-e-Modelo-de-Dados.md): justificativa formal, diagrama ER e explicação de cada relacionamento.
+- [RFC-002: Escolha do banco de dados](docs/rfc/RFC-002-Escolha-do-Banco-de-Dados.md): as opções comparadas (Aurora, MySQL, SQL Server, DynamoDB, MongoDB e PostgreSQL dentro do EKS).
+
+A visão geral do sistema inteiro está no [docs/arquitetura.md](https://github.com/GuiToniello/tech-challenge-fase-3-APP-soat16-rm374658/blob/main/docs/arquitetura.md) do repo APP.
+
 Os detalhes do acesso a dados e das migrations estão no [repositório APP](https://github.com/GuiToniello/tech-challenge-fase-3-APP-soat16-rm374658) (ADR-007, *EF Core com PostgreSQL*, e ADR-009, *Migrações automáticas no startup*). Este repositório só cria a instância e o database vazio `oficina`. As APIs criam as tabelas quando sobem.
 
 ## 3. Dependências entre repositórios
